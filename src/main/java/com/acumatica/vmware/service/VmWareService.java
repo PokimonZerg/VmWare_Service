@@ -1,6 +1,8 @@
 package com.acumatica.vmware.service;
 
 import com.acumatica.vmware.service.model.Error;
+import com.acumatica.vmware.service.ssh.*;
+import javax.ejb.EJB;
 import javax.ws.rs.GET;
 import javax.ws.rs.Path;
 import javax.ws.rs.PathParam;
@@ -10,6 +12,9 @@ import javax.ws.rs.core.MediaType;
 @Path("/service")
 public class VmWareService {
     
+    @EJB
+    SshClient SshClient;
+    
     @GET
     @Path("/restore/{name}")
     @Produces({MediaType.APPLICATION_JSON, MediaType.APPLICATION_XML})
@@ -17,6 +22,7 @@ public class VmWareService {
         //Error r = new Error();
         //return r;
         
+        SshClient.connect(5);
         throw new VmWareException("da da da!");
         
         //return "test me";
