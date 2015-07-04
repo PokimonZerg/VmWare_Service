@@ -20,28 +20,14 @@ public class Error {
         this.message = exception.getMessage();
         this.trace = ExceptionUtils.getStackTrace(exception);
     }
-            
-    /*public Error(String message) {
-        this.message = message;
-        //this.message = e.getMessage();
-        //this.trace = ExceptionUtils.getStackTrace(e);
-    }*/
 
     @XmlElement
     public String getMessage() {
         return message;
     }
 
-    /*public void setMessage(String message) {
-        this.message = message;
-    }*/
-
     @XmlElement
     public String getTrace() {
         return trace;
     }
-
-    /*public void setTrace(String trace) {
-        this.trace = trace;
-    }*/
 }
