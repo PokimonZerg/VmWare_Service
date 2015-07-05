@@ -14,7 +14,6 @@ public class VmWareServiceApplication extends Application {
         s.add(VmWareService.class);
         s.add(VmWareExceptionMapper.class);
         s.add(SshClient.class);
-        s.add(SshClient.class);
         return s;
     }
 }

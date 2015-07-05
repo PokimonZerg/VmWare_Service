@@ -62,4 +62,9 @@ public class SnapshotInfo {
 
     public SnapshotInfo() {
     }
+    
+    @Override
+    public String toString() {
+        return name + "#" + id;
+    }
 }

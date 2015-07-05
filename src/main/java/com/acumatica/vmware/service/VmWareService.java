@@ -1,7 +1,7 @@
 package com.acumatica.vmware.service;
 
-import com.acumatica.vmware.service.model.Error;
 import com.acumatica.vmware.service.model.SnapshotInfo;
+import com.acumatica.vmware.service.model.VmInfo;
 import com.acumatica.vmware.service.ssh.*;
 import com.jcraft.jsch.JSchException;
 import java.io.IOException;
@@ -11,22 +11,20 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import javax.ejb.EJB;
 import javax.ws.rs.GET;
 import javax.ws.rs.Path;
 import javax.ws.rs.PathParam;
 import javax.ws.rs.Produces;
+import javax.ws.rs.QueryParam;
 import javax.ws.rs.core.MediaType;
 
 @Path("/service")
 public class VmWareService {
     
-    @EJB
-    private SshClient sshClient;
-    
     private Map<String, Integer> getVmList() throws JSchException, IOException {
         Map<String, Integer> map = new HashMap<>();
         
+        SshClient sshClient = new SshClient();
         sshClient.connect();
         String result = sshClient.execute("vim-cmd vmsvc/getallvms");
         sshClient.disconnect();
@@ -45,6 +43,7 @@ public class VmWareService {
         List<SnapshotInfo> snapshots = new ArrayList<>();
         SimpleDateFormat dateFormat = new SimpleDateFormat("d/M/yyyy H:mm:ss");
         
+        SshClient sshClient = new SshClient();
         sshClient.connect();
         String result = sshClient.execute("vim-cmd vmsvc/snapshot.get " + id);
         sshClient.disconnect();
@@ -66,27 +65,76 @@ public class VmWareService {
         return snapshots;
     }
     
-    @GET
-    @Path("/snapshots/{id}")
-    @Produces({MediaType.APPLICATION_JSON, MediaType.APPLICATION_XML})
-    public List<SnapshotInfo> snapshots(@PathParam("id") int id) throws JSchException, IOException, ParseException {
-        return getSnapshotList(id);
+    private int getSnapshotByName(int vmId, String name) throws JSchException, IOException, ParseException {
+        List<SnapshotInfo> snapshots = getSnapshotList(vmId);
+        
+        for (SnapshotInfo snapshot : snapshots) {
+            if (snapshot.getName().equals(name)) {
+                return snapshot.getId();
+            }
+        }
+        
+        throw new VmWareException("Snapshot with name '" + name + "' not found. Actual snapshot list: " + snapshots);
     }
     
     @GET
-    @Path("/restore/{name}")
+    @Path("/list")
     @Produces({MediaType.APPLICATION_JSON, MediaType.APPLICATION_XML})
-    public void restore(@PathParam("{name}") String name) throws VmWareException {
+    public List<VmInfo> list() throws VmWareException {
+        try {
+            List<VmInfo> result = new ArrayList<>();
+            Map<String, Integer> vms = getVmList();
+            
+            for (String s: vms.keySet()) {
+                VmInfo info = new VmInfo();
+                info.setName(s);
+                info.setId(vms.get(s));
+                result.add(info);
+            }
+            
+            return result;
+        }
+        catch (JSchException | IOException e) {
+            throw new VmWareException("Unexpected error: " + e.getMessage());
+        }
+    }
+    
+    @GET
+    @Path("/snapshots")
+    @Produces({MediaType.APPLICATION_JSON, MediaType.APPLICATION_XML})
+    public List<SnapshotInfo> snapshots(@QueryParam("vm") String vm) throws VmWareException {
+        try {
+            Map<String, Integer> vms = getVmList();
+            if (vms.containsKey(vm) == false)
+                throw new VmWareException("Virtual machine with name '" + vm + "' not found. Actual vm list: " + vms);
+            int vmId = vms.get(vm);
+            
+            return getSnapshotList(vmId);
+        }
+        catch(JSchException | IOException | ParseException e) {
+            throw new VmWareException("Unexpected error: " + e.getMessage());
+        }
+    }
+    
+    @GET
+    @Path("/restore")
+    @Produces({MediaType.APPLICATION_JSON, MediaType.APPLICATION_XML})
+    public void restore(@QueryParam("vm") String vm, @QueryParam("snapshot") String snapshot) throws VmWareException {
         
         try {
             Map<String, Integer> vms = getVmList();
-        
+            if (vms.containsKey(vm) == false)
+                throw new VmWareException("Virtual machine with name '" + vm + "' not found. Actual vm list: " + vms);
+            int vmId = vms.get(vm);
+            int snapshotId = getSnapshotByName(vmId, snapshot);
+            
+            SshClient sshClient = new SshClient();
             sshClient.connect();
-            String result = sshClient.execute("vim-cmd vmsvc/getallvms");
+            String result = sshClient.execute("vim-cmd vmsvc/snapshot.revert " + vmId + " " + snapshotId + " false");
             sshClient.disconnect();
         
         } 
-        catch(JSchException | IOException e) {
+        catch(JSchException | IOException | ParseException e) {
             throw new VmWareException("Unexpected error: " + e.getMessage());
         }
     }

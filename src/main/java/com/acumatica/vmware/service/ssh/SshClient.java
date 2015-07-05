@@ -1,6 +1,5 @@
 package com.acumatica.vmware.service.ssh;
 
-import com.jcraft.jsch.Channel;
 import com.jcraft.jsch.ChannelExec;
 import com.jcraft.jsch.JSch;
 import com.jcraft.jsch.JSchException;
@@ -8,13 +7,9 @@ import com.jcraft.jsch.Session;
 import java.io.IOException;
 import java.io.InputStream;
 import java.util.Properties;
-import javax.annotation.PreDestroy;
-import javax.ejb.Remove;
-import javax.ejb.Stateful;
 import javax.validation.constraints.NotNull;
 import org.apache.commons.io.IOUtils;
 
-@Stateful
 public class SshClient {
     
     private final String username = "root";
@@ -55,14 +50,8 @@ public class SshClient {
         channel.connect();
         
         StringBuilder builder = new StringBuilder();
-        //byte[] tmp = new byte[1024];
         while(!channel.isClosed()){
-            
             builder.append(IOUtils.toString(in));
-            //if (in.read(tmp, 0, 1024) < 0)
-            //    break;
-            
-            //builder.append(new String(tmp));
         }
         
         if (in.available() > 1) builder.append(IOUtils.toString(in));
@@ -70,13 +59,5 @@ public class SshClient {
         channel.disconnect();
         
         return builder.toString();
-    }
-    
-    @Remove
-    public void remove() {
-        if (session != null)
-            session.disconnect();
-        
-        jsch = null;
     }
 }
